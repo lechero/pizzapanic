@@ -278,6 +278,7 @@ export async function POST(request: Request) {
         trackingId,
         status,
         panic,
+        panicFromStatus: panic ? status : null,
         order,
         customerName,
         customerAddress,
@@ -297,18 +298,39 @@ export async function PATCH(request: Request) {
     const body = await readBody(request)
     const lookup = readLookupFromBody(body)
     const updates: Partial<typeof orders.$inferInsert> = {}
+    let currentOrder:
+      | Pick<
+          typeof orders.$inferSelect,
+          "status" | "panicFromStatus" | "cookingStartedAt"
+        >
+      | null
+      | undefined
+
+    async function getCurrentOrder() {
+      if (currentOrder !== undefined) {
+        return currentOrder
+      }
+
+      const [order] = await getDb()
+        .select({
+          status: orders.status,
+          panicFromStatus: orders.panicFromStatus,
+          cookingStartedAt: orders.cookingStartedAt,
+        })
+        .from(orders)
+        .where(whereOrder(lookup))
+        .limit(1)
+
+      currentOrder = order ?? null
+      return currentOrder
+    }
 
     if ("status" in body) {
       updates.status = normalizeStatus(body.status)
 
       if (updates.status === "cooking") {
-        const [currentOrder] = await getDb()
-          .select({ cookingStartedAt: orders.cookingStartedAt })
-          .from(orders)
-          .where(whereOrder(lookup))
-          .limit(1)
-
-        updates.cookingStartedAt = currentOrder?.cookingStartedAt ?? Date.now()
+        updates.cookingStartedAt =
+          (await getCurrentOrder())?.cookingStartedAt ?? Date.now()
       }
 
       if (updates.status === "received") {
@@ -318,6 +340,14 @@ export async function PATCH(request: Request) {
 
     if ("panic" in body) {
       updates.panic = normalizePanic(body.panic)
+
+      if (updates.panic) {
+        const order = await getCurrentOrder()
+        updates.panicFromStatus =
+          order?.panicFromStatus ?? updates.status ?? order?.status ?? null
+      } else {
+        updates.panicFromStatus = null
+      }
     }
 
     if ("order" in body) {

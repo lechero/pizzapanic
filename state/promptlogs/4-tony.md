@@ -27,3 +27,14 @@ we allso will have a constant for couriers[] -> this length is the max for "tran
 -------
 
 for now i need you to generate 12 couriers as constants like [pizzas.ts](/Users/miguelfuentes/projects/pizza-panic/lib/pizzas.ts) !  proceed with implementation!
+
+-------
+
+please only use icons for prev and next in the tony screen! redesign the whole card, in following layout-> 
+<tr><td>prev icon</><td>content</td><td>next icon</td></tr>
+<tr><td collspan=3>panic icon</td></tr>
+
+-------
+
+ensure, once an order is in panic mode, that it is only shown in the panic pane! also clearly show the state from which it panicked from
+

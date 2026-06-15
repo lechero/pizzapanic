@@ -1,0 +1,1 @@
+ALTER TABLE `order` ADD `panic_from_status` text;

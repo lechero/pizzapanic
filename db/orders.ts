@@ -31,6 +31,7 @@ export type OrderInput = {
 
 export type OrderUpdateInput = Partial<Omit<OrderInput, "trackingId">> & {
   cookingStartedAt?: number | null
+  panicFromStatus?: OrderStatus | null
 }
 
 export type OrderMoveDirection = "prev" | "next"
@@ -199,9 +200,21 @@ export async function moveOrderStatus(
 }
 
 export async function panicOrder(id: string): Promise<OrderMutationResult> {
+  const order = await getOrderById(id)
+
+  if (!order) {
+    return {
+      ok: false,
+      message: "Order not found.",
+    }
+  }
+
   const [updatedOrder] = await getDb()
     .update(orders)
-    .set({ panic: true })
+    .set({
+      panic: true,
+      panicFromStatus: order.panicFromStatus ?? order.status,
+    })
     .where(eq(orders.id, id))
     .returning()
 
@@ -247,7 +260,10 @@ export async function tickOrderPanicState(now = Date.now()) {
     if (now >= panicAt) {
       await db
         .update(orders)
-        .set({ panic: true })
+        .set({
+          panic: true,
+          panicFromStatus: order.panicFromStatus ?? order.status,
+        })
         .where(eq(orders.id, order.id))
       panicked += 1
     }
@@ -272,6 +288,7 @@ function toNewOrder(input: OrderInput): NewOrder {
     trackingId: input.trackingId?.trim() || makeTrackingId(),
     status,
     panic: input.panic ?? false,
+    panicFromStatus: input.panic ? status : null,
     order: input.order,
     customerName: input.customerName?.trim() ?? "",
     customerAddress: input.customerAddress?.trim() ?? "",
@@ -284,17 +301,28 @@ async function toOrderUpdate(
   id: string,
   input: OrderUpdateInput
 ): Promise<OrderUpdateInput> {
-  if (input.status !== "cooking") {
-    return input
-  }
-
   const currentOrder = await getOrderById(id)
+  const update: OrderUpdateInput = { ...input }
 
-  return {
-    ...input,
-    cookingStartedAt:
-      input.cookingStartedAt ?? currentOrder?.cookingStartedAt ?? Date.now(),
+  if (input.status === "cooking") {
+    update.cookingStartedAt =
+      input.cookingStartedAt ?? currentOrder?.cookingStartedAt ?? Date.now()
   }
+
+  if (input.panic === true) {
+    update.panicFromStatus =
+      input.panicFromStatus ??
+      currentOrder?.panicFromStatus ??
+      input.status ??
+      currentOrder?.status ??
+      null
+  }
+
+  if (input.panic === false) {
+    update.panicFromStatus = null
+  }
+
+  return update
 }
 
 function getAdjacentStatus(status: OrderStatus, direction: OrderMoveDirection) {

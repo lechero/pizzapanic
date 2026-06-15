@@ -13,6 +13,7 @@ export const orders = sqliteTable(
       .notNull()
       .default("received"),
     panic: integer("panic", { mode: "boolean" }).notNull().default(false),
+    panicFromStatus: text("panic_from_status", { enum: orderStatuses }),
     order: text("order", { mode: "json" }).$type<string[]>().notNull(),
     customerName: text("customer_name").notNull().default(""),
     customerAddress: text("customer_address").notNull().default(""),

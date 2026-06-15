@@ -31,13 +31,18 @@ export function TonyBoard({ orders }: TonyBoardProps) {
     updateTonyOrderAction,
     initialState
   )
+  const activeOrders = orders.filter((order) => !order.panic)
   const ordersByStatus = React.useMemo(
-    () => groupOrdersByStatus(orders),
-    [orders]
+    () => groupOrdersByStatus(activeOrders),
+    [activeOrders]
   )
   const panicOrders = orders.filter((order) => order.panic)
-  const cookingCount = ordersByStatus.cooking.length
-  const transitCount = ordersByStatus.transit.length
+  const cookingCount = orders.filter(
+    (order) => order.status === "cooking"
+  ).length
+  const transitCount = orders.filter(
+    (order) => order.status === "transit"
+  ).length
 
   return (
     <div className="grid gap-4">
@@ -160,14 +165,17 @@ function OrderCard({
   return (
     <article
       className={cn(
-        "grid gap-3 border bg-background p-3",
+        "overflow-hidden border bg-background",
         order.panic
           ? "border-destructive/40 shadow-[inset_3px_0_0_var(--destructive)]"
           : "border-border"
       )}
     >
-      <OrderSummary order={order} />
-      <OrderActions order={order} formAction={formAction} pending={pending} />
+      <OrderControlCard
+        order={order}
+        formAction={formAction}
+        pending={pending}
+      />
     </article>
   )
 }
@@ -182,17 +190,89 @@ function PanicOrder({
   pending: boolean
 }) {
   return (
-    <article className="grid gap-3 border border-destructive/30 bg-background p-3">
-      <div className="flex items-start justify-between gap-3">
-        <OrderSummary order={order} />
-        <OrderStatusBadge status={order.status} />
-      </div>
-      <OrderActions order={order} formAction={formAction} pending={pending} />
+    <article className="overflow-hidden border border-destructive/30 bg-background">
+      <OrderControlCard
+        order={order}
+        formAction={formAction}
+        pending={pending}
+        showStatus
+      />
     </article>
   )
 }
 
-function OrderSummary({ order }: { order: Order }) {
+function OrderControlCard({
+  order,
+  formAction,
+  pending,
+  showStatus = false,
+}: {
+  order: Order
+  formAction: (payload: FormData) => void
+  pending: boolean
+  showStatus?: boolean
+}) {
+  const canMovePrev = order.status !== "received"
+  const canMoveNext = order.status !== "delivered"
+
+  return (
+    <table className="w-full table-fixed border-collapse">
+      <tbody>
+        <tr>
+          <td className="w-10 border-r border-border align-middle">
+            {canMovePrev ? (
+              <OrderActionButton
+                orderId={order.id}
+                intent="prev"
+                label="Move order to previous status"
+                formAction={formAction}
+                pending={pending}
+              />
+            ) : (
+              <span aria-hidden="true" className="block size-10" />
+            )}
+          </td>
+          <td className="min-w-0 px-3 py-3 align-top">
+            <OrderSummary order={order} showStatus={showStatus} />
+          </td>
+          <td className="w-10 border-l border-border align-middle">
+            {canMoveNext ? (
+              <OrderActionButton
+                orderId={order.id}
+                intent="next"
+                label="Move order to next status"
+                formAction={formAction}
+                pending={pending}
+              />
+            ) : (
+              <span aria-hidden="true" className="block size-10" />
+            )}
+          </td>
+        </tr>
+        <tr>
+          <td colSpan={3} className="border-t border-border">
+            <OrderActionButton
+              orderId={order.id}
+              intent="panic"
+              label="Mark order as panic"
+              formAction={formAction}
+              pending={pending}
+              wide
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  )
+}
+
+function OrderSummary({
+  order,
+  showStatus = false,
+}: {
+  order: Order
+  showStatus?: boolean
+}) {
   return (
     <div className="min-w-0">
       <div className="flex items-center gap-2">
@@ -200,6 +280,7 @@ function OrderSummary({ order }: { order: Order }) {
           {order.trackingId}
         </span>
         <PanicBadge panic={order.panic} />
+        {showStatus ? <OrderStatusBadge status={order.status} /> : null}
       </div>
       <div className="mt-2 truncate text-sm font-medium">
         {order.customerName || "unknown"}
@@ -211,45 +292,13 @@ function OrderSummary({ order }: { order: Order }) {
         <span>{order.order.length} pizzas</span>
         <span>{order.courierId ?? "unassigned"}</span>
       </div>
-    </div>
-  )
-}
-
-function OrderActions({
-  order,
-  formAction,
-  pending,
-}: {
-  order: Order
-  formAction: (payload: FormData) => void
-  pending: boolean
-}) {
-  const canMovePrev = order.status !== "received"
-  const canMoveNext = order.status !== "delivered"
-
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {canMovePrev ? (
-        <OrderActionButton
-          orderId={order.id}
-          intent="prev"
-          formAction={formAction}
-          pending={pending}
-        />
-      ) : null}
-      <OrderActionButton
-        orderId={order.id}
-        intent="panic"
-        formAction={formAction}
-        pending={pending}
-      />
-      {canMoveNext ? (
-        <OrderActionButton
-          orderId={order.id}
-          intent="next"
-          formAction={formAction}
-          pending={pending}
-        />
+      {showStatus ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+          <span className="font-mono text-[11px] text-muted-foreground uppercase">
+            Panicked from
+          </span>
+          <OrderStatusBadge status={order.panicFromStatus ?? order.status} />
+        </div>
       ) : null}
     </div>
   )
@@ -258,13 +307,17 @@ function OrderActions({
 function OrderActionButton({
   orderId,
   intent,
+  label,
   formAction,
   pending,
+  wide = false,
 }: {
   orderId: string
   intent: "prev" | "panic" | "next"
+  label: string
   formAction: (payload: FormData) => void
   pending: boolean
+  wide?: boolean
 }) {
   const icon =
     intent === "prev" ? (
@@ -282,12 +335,12 @@ function OrderActionButton({
       <Button
         type="submit"
         variant={intent === "panic" ? "destructive" : "outline"}
-        size="xs"
+        size={wide ? "sm" : "icon-sm"}
         disabled={pending}
-        className="min-w-0"
+        className={cn("rounded-none border-0", wide ? "h-9 w-full" : "size-10")}
       >
         {icon}
-        {intent}
+        <span className="sr-only">{label}</span>
       </Button>
     </form>
   )
