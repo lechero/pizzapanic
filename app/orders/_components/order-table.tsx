@@ -2,12 +2,23 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { ArrowDown, ArrowUp, ArrowUpDown, Eye, Search, Trash2, X } from "lucide-react"
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Eye,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { deleteOrderAction } from "@/app/orders/actions"
 import { OrderEditSheet } from "@/app/orders/_components/order-edit-sheet"
-import { OrderStatusBadge, PanicBadge } from "@/app/orders/_components/order-status-badge"
+import {
+  OrderStatusBadge,
+  PanicBadge,
+} from "@/app/orders/_components/order-status-badge"
 import { Button } from "@/components/ui/button"
 import type { OrderDirection, OrderSort } from "@/db/orders"
 import type { Order } from "@/db/schema"
@@ -26,7 +37,12 @@ const columns: Array<{ key: OrderSort; label: string }> = [
   { key: "courierId", label: "Courier" },
 ]
 
-export function OrderTable({ orders, query, sort, direction }: OrderTableProps) {
+export function OrderTable({
+  orders,
+  query,
+  sort,
+  direction,
+}: OrderTableProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -53,7 +69,8 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
   }
 
   function onSort(nextSort: OrderSort) {
-    const nextDirection = sort === nextSort && direction === "asc" ? "desc" : "asc"
+    const nextDirection =
+      sort === nextSort && direction === "asc" ? "desc" : "asc"
     pushParams({ sort: nextSort, dir: nextDirection })
   }
 
@@ -61,13 +78,13 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
     <div className="grid gap-4">
       <form onSubmit={onSearch} className="flex flex-col gap-2 sm:flex-row">
         <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             key={query}
             ref={searchInputRef}
             defaultValue={query}
             placeholder="Search tracking, status, customer, courier, or pizza id"
-            className="h-10 w-full border border-input bg-background pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+            className="h-10 w-full border border-input bg-background pr-3 pl-9 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
           />
         </div>
         <div className="flex gap-2">
@@ -75,7 +92,12 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
             Search
           </Button>
           {query ? (
-            <Button type="button" variant="outline" size="icon-sm" onClick={() => pushParams({ q: null })}>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              onClick={() => pushParams({ q: null })}
+            >
               <X />
               <span className="sr-only">Clear search</span>
             </Button>
@@ -85,10 +107,13 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
 
       <div className="overflow-x-auto border border-border">
         <table className="w-full min-w-[840px] border-collapse text-sm">
-          <thead className="bg-muted/60 text-xs uppercase text-muted-foreground">
+          <thead className="bg-muted/60 text-xs text-muted-foreground uppercase">
             <tr>
               {columns.map((column) => (
-                <th key={column.key} className="border-b px-3 py-2 text-left font-semibold">
+                <th
+                  key={column.key}
+                  className="border-b px-3 py-2 text-left font-semibold"
+                >
                   <button
                     type="button"
                     onClick={() => onSort(column.key)}
@@ -107,16 +132,27 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
                   </button>
                 </th>
               ))}
-              <th className="border-b px-3 py-2 text-left font-semibold">Customer</th>
-              <th className="border-b px-3 py-2 text-left font-semibold">Pizza IDs</th>
-              <th className="border-b px-3 py-2 text-right font-semibold">Actions</th>
+              <th className="border-b px-3 py-2 text-left font-semibold">
+                Customer
+              </th>
+              <th className="border-b px-3 py-2 text-left font-semibold">
+                Pizza IDs
+              </th>
+              <th className="border-b px-3 py-2 text-right font-semibold">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {orders.length > 0 ? (
               orders.map((order) => (
-                <tr key={order.id} className="border-b last:border-b-0 hover:bg-muted/40">
-                  <td className="px-3 py-3 font-mono text-xs">{order.trackingId}</td>
+                <tr
+                  key={order.id}
+                  className="border-b last:border-b-0 hover:bg-muted/40"
+                >
+                  <td className="px-3 py-3 font-mono text-xs">
+                    {order.trackingId}
+                  </td>
                   <td className="px-3 py-3">
                     <OrderStatusBadge status={order.status} />
                   </td>
@@ -127,13 +163,20 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
                     {order.courierId ?? "unassigned"}
                   </td>
                   <td className="max-w-[220px] px-3 py-3">
-                    <div className="truncate font-medium">{order.customerName || "unknown"}</div>
-                    <div className="truncate text-xs text-muted-foreground">{order.customerAddress || "no address"}</div>
+                    <div className="truncate font-medium">
+                      {order.customerName || "unknown"}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {order.customerAddress || "no address"}
+                    </div>
                   </td>
                   <td className="max-w-[260px] px-3 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {order.order.map((pizzaId) => (
-                        <span key={pizzaId} className="border border-border bg-background px-2 py-1 font-mono text-[11px]">
+                      {order.order.map((pizzaId, index) => (
+                        <span
+                          key={`${pizzaId}-${index}`}
+                          className="border border-border bg-background px-2 py-1 font-mono text-[11px]"
+                        >
                           {pizzaId}
                         </span>
                       ))}
@@ -147,7 +190,11 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
                           <span className="sr-only">View order</span>
                         </Link>
                       </Button>
-                      <OrderEditSheet order={order} mode="edit" triggerLabel="Edit" />
+                      <OrderEditSheet
+                        order={order}
+                        mode="edit"
+                        triggerLabel="Edit"
+                      />
                       <form
                         action={deleteOrderAction}
                         onSubmit={(event) => {
@@ -157,7 +204,11 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
                         }}
                       >
                         <input type="hidden" name="id" value={order.id} />
-                        <Button type="submit" variant="destructive" size="icon-xs">
+                        <Button
+                          type="submit"
+                          variant="destructive"
+                          size="icon-xs"
+                        >
                           <Trash2 />
                           <span className="sr-only">Delete order</span>
                         </Button>
@@ -168,7 +219,10 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="px-3 py-12 text-center text-sm text-muted-foreground">
+                <td
+                  colSpan={7}
+                  className="px-3 py-12 text-center text-sm text-muted-foreground"
+                >
                   No orders found.
                 </td>
               </tr>

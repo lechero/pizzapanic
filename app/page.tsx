@@ -1,19 +1,64 @@
+import Link from "next/link"
+import { Bike, ChefHat, ClipboardList, Menu as MenuIcon } from "lucide-react"
+
+import { PanicAttackButton } from "@/app/_components/panic-attack-button"
 import { Button } from "@/components/ui/button"
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
-    </div>
+    <main className="grid min-h-svh place-items-center px-4 py-10">
+      <nav
+        aria-label="Pizza Panic"
+        className="flex w-full max-w-xs flex-col gap-3"
+      >
+        <Button asChild size="lg" className="w-full justify-between">
+          <Link href="/menu">
+            Menu
+            <MenuIcon />
+          </Link>
+        </Button>
+
+        <div className="border-t border-border" />
+
+        <Button
+          asChild
+          size="lg"
+          variant="outline"
+          className="w-full justify-between"
+        >
+          <Link href="/courier">
+            Be Courier
+            <Bike />
+          </Link>
+        </Button>
+        <Button
+          asChild
+          size="lg"
+          variant="outline"
+          className="w-full justify-between"
+        >
+          <Link href="/tony">
+            Be Tony
+            <ChefHat />
+          </Link>
+        </Button>
+
+        <div className="border-t border-border" />
+
+        <PanicAttackButton />
+
+        <Button
+          asChild
+          size="lg"
+          variant="ghost"
+          className="w-full justify-between"
+        >
+          <Link href="/orders">
+            Orders
+            <ClipboardList />
+          </Link>
+        </Button>
+      </nav>
+    </main>
   )
 }
