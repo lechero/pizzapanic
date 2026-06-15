@@ -1,8 +1,45 @@
 version: "3"
 
 tasks:
+  default:
+    desc: Show setup guidance and available tasks
+    silent: true
+    cmds:
+      - task: info
+      - task --list
+
+  install:
+    desc: Install project dependencies with pnpm
+    cmds:
+      - corepack pnpm install
+
+  info:
+    desc: Show project setup and task usage guidance
+    silent: true
+    cmds:
+      - |
+        printf 'Node: use the version in .nvmrc (%s) before running project tasks.\n' "$(cat .nvmrc)"
+        echo 'Package manager: use pnpm for this repository; pnpm-lock.yaml is committed.'
+        echo 'Recommended commands: task install, task dev, task migrate.'
+        echo 'Use shadcn helper with explicit components, for example: task shadd -- input table sheet label'
+
   migrate:
     desc: Apply Drizzle migrations to the local SQLite database
     cmds:
       - mkdir -p var
-      - pnpm exec drizzle-kit migrate
+      - corepack pnpm exec drizzle-kit migrate
+
+  dev:
+    desc: Start the Next.js development server
+    cmds:
+      - corepack pnpm dev
+
+  shadd:
+    desc: Add shadcn/ui components; pass names after -- or omit them for the component picker
+    cmds:
+      - |
+        if [ -n "{{.CLI_ARGS}}" ]; then
+          npx shadcn@latest add {{.CLI_ARGS}}
+        else
+          npx shadcn@latest add
+        fi
