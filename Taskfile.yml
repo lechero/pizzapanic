@@ -1,0 +1,8 @@
+version: "3"
+
+tasks:
+  migrate:
+    desc: Apply Drizzle migrations to the local SQLite database
+    cmds:
+      - mkdir -p var
+      - pnpm exec drizzle-kit migrate
