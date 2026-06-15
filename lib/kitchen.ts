@@ -10,62 +10,62 @@ export const couriers = [
   {
     id: "courier-ada",
     publicId: "COU-001",
-    name: "Ada",
+    name: "Sunny Ada",
   },
   {
     id: "courier-bruno",
     publicId: "COU-002",
-    name: "Bruno",
+    name: "Jolly Bruno",
   },
   {
     id: "courier-celeste",
     publicId: "COU-003",
-    name: "Celeste",
+    name: "Cheerful Celeste",
   },
   {
     id: "courier-dante",
     publicId: "COU-004",
-    name: "Dante",
+    name: "Merry Dante",
   },
   {
     id: "courier-echo",
     publicId: "COU-005",
-    name: "Echo",
+    name: "Bright Echo",
   },
   {
     id: "courier-frida",
     publicId: "COU-006",
-    name: "Frida",
+    name: "Joyful Frida",
   },
   {
     id: "courier-gio",
     publicId: "COU-007",
-    name: "Gio",
+    name: "Peppy Gio",
   },
   {
     id: "courier-hana",
     publicId: "COU-008",
-    name: "Hana",
+    name: "Happy Hana",
   },
   {
     id: "courier-ivo",
     publicId: "COU-009",
-    name: "Ivo",
+    name: "Lucky Ivo",
   },
   {
     id: "courier-juno",
     publicId: "COU-010",
-    name: "Juno",
+    name: "Breezy Juno",
   },
   {
     id: "courier-kira",
     publicId: "COU-011",
-    name: "Kira",
+    name: "Kind Kira",
   },
   {
     id: "courier-luca",
     publicId: "COU-012",
-    name: "Luca",
+    name: "Lively Luca",
   },
 ] as const satisfies readonly Courier[]
 
@@ -76,4 +76,8 @@ export const maxTransitOrders = couriers.length
 
 export function getCourierById(id: string) {
   return couriers.find((courier) => courier.id === id) ?? null
+}
+
+export function getCourierByPublicId(publicId: string) {
+  return couriers.find((courier) => courier.publicId === publicId) ?? null
 }

@@ -1,10 +1,15 @@
 import { randomUUID } from "node:crypto"
 
-import { asc, desc, eq, like, or } from "drizzle-orm"
+import { and, asc, desc, eq, like, or } from "drizzle-orm"
 
 import { getDb } from "@/db"
 import { orders, type NewOrder, type Order } from "@/db/schema"
-import { couriers, maxCookingOrders, maxTransitOrders } from "@/lib/kitchen"
+import {
+  couriers,
+  getCourierById,
+  maxCookingOrders,
+  maxTransitOrders,
+} from "@/lib/kitchen"
 import { orderStatuses, type OrderStatus } from "@/lib/order-statuses"
 import { getPizzaById } from "@/lib/pizzas"
 
@@ -115,6 +120,102 @@ export async function getOrderByTrackingId(trackingId: string) {
     .limit(1)
 
   return order ?? null
+}
+
+export async function listCookedOrders(): Promise<Order[]> {
+  return getDb()
+    .select()
+    .from(orders)
+    .where(eq(orders.status, "cooked"))
+    .orderBy(asc(orders.trackingId))
+}
+
+export async function getTransitOrderForCourier(courierId: string) {
+  const [order] = await getDb()
+    .select()
+    .from(orders)
+    .where(and(eq(orders.status, "transit"), eq(orders.courierId, courierId)))
+    .orderBy(asc(orders.trackingId))
+    .limit(1)
+
+  return order ?? null
+}
+
+export async function pickUpCookedOrder(input: {
+  orderId: string
+  courierId: string
+}): Promise<OrderMutationResult> {
+  const courier = getCourierById(input.courierId)
+
+  if (!courier) {
+    return {
+      ok: false,
+      message: "Courier not found.",
+    }
+  }
+
+  const activeOrder = await getTransitOrderForCourier(courier.id)
+
+  if (activeOrder) {
+    return {
+      ok: false,
+      message: "Deliver the active order before picking up another.",
+      order: activeOrder,
+    }
+  }
+
+  const [updatedOrder] = await getDb()
+    .update(orders)
+    .set({
+      status: "transit",
+      courierId: courier.id,
+    })
+    .where(and(eq(orders.id, input.orderId), eq(orders.status, "cooked")))
+    .returning()
+
+  return {
+    ok: Boolean(updatedOrder),
+    message: updatedOrder
+      ? "Order picked up for delivery."
+      : "Only cooked orders can be picked up.",
+    order: updatedOrder ?? undefined,
+  }
+}
+
+export async function deliverCourierOrder(input: {
+  orderId: string
+  courierId: string
+}): Promise<OrderMutationResult> {
+  const courier = getCourierById(input.courierId)
+
+  if (!courier) {
+    return {
+      ok: false,
+      message: "Courier not found.",
+    }
+  }
+
+  const [updatedOrder] = await getDb()
+    .update(orders)
+    .set({
+      status: "delivered",
+    })
+    .where(
+      and(
+        eq(orders.id, input.orderId),
+        eq(orders.status, "transit"),
+        eq(orders.courierId, courier.id)
+      )
+    )
+    .returning()
+
+  return {
+    ok: Boolean(updatedOrder),
+    message: updatedOrder
+      ? "Order marked as delivered."
+      : "No active delivery was found for this courier.",
+    order: updatedOrder ?? undefined,
+  }
 }
 
 export async function createOrder(input: OrderInput) {
