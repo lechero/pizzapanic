@@ -66,7 +66,7 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
             key={query}
             ref={searchInputRef}
             defaultValue={query}
-            placeholder="Search tracking, status, courier, or pizza id"
+            placeholder="Search tracking, status, customer, courier, or pizza id"
             className="h-10 w-full border border-input bg-background pl-9 pr-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
           />
         </div>
@@ -107,6 +107,7 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
                   </button>
                 </th>
               ))}
+              <th className="border-b px-3 py-2 text-left font-semibold">Customer</th>
               <th className="border-b px-3 py-2 text-left font-semibold">Pizza IDs</th>
               <th className="border-b px-3 py-2 text-right font-semibold">Actions</th>
             </tr>
@@ -124,6 +125,10 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
                   </td>
                   <td className="px-3 py-3 font-mono text-xs text-muted-foreground">
                     {order.courierId ?? "unassigned"}
+                  </td>
+                  <td className="max-w-[220px] px-3 py-3">
+                    <div className="truncate font-medium">{order.customerName || "unknown"}</div>
+                    <div className="truncate text-xs text-muted-foreground">{order.customerAddress || "no address"}</div>
                   </td>
                   <td className="max-w-[260px] px-3 py-3">
                     <div className="flex flex-wrap gap-1">
@@ -163,7 +168,7 @@ export function OrderTable({ orders, query, sort, direction }: OrderTableProps) 
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="px-3 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={7} className="px-3 py-12 text-center text-sm text-muted-foreground">
                   No orders found.
                 </td>
               </tr>

@@ -22,6 +22,8 @@ export async function createOrderAction(
       status: readStatus(formData),
       panic: readBoolean(formData, "panic"),
       order: readPizzaIds(formData),
+      customerName: readOptionalString(formData, "customerName"),
+      customerAddress: readOptionalString(formData, "customerAddress"),
       courierId: readNullableString(formData, "courierId"),
     })
 
@@ -47,6 +49,8 @@ export async function updateOrderAction(
       status: readStatus(formData),
       panic: readBoolean(formData, "panic"),
       order: readPizzaIds(formData),
+      customerName: readOptionalString(formData, "customerName"),
+      customerAddress: readOptionalString(formData, "customerAddress"),
       courierId: readNullableString(formData, "courierId"),
     })
 

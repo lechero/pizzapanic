@@ -146,6 +146,26 @@ export function OrderEditSheet({
                   />
                 </Field>
 
+                <Field label="Customer name" htmlFor={`${titleId}-customer-name`}>
+                  <input
+                    id={`${titleId}-customer-name`}
+                    name="customerName"
+                    defaultValue={order?.customerName ?? ""}
+                    placeholder="Walk-in customer"
+                    className="h-10 w-full border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+                  />
+                </Field>
+
+                <Field label="Customer address" htmlFor={`${titleId}-customer-address`}>
+                  <input
+                    id={`${titleId}-customer-address`}
+                    name="customerAddress"
+                    defaultValue={order?.customerAddress ?? ""}
+                    placeholder="Delivery address"
+                    className="h-10 w-full border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+                  />
+                </Field>
+
                 <Field label="Courier ID" htmlFor={`${titleId}-courier`}>
                   <input
                     id={`${titleId}-courier`}

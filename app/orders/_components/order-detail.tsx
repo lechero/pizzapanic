@@ -57,6 +57,15 @@ export function OrderDetail({ order }: { order: Order }) {
         </Metric>
       </section>
 
+      <section className="grid gap-4 md:grid-cols-2">
+        <Metric label="Customer">
+          <span className="text-sm">{order.customerName || "unknown"}</span>
+        </Metric>
+        <Metric label="Address">
+          <span className="text-sm">{order.customerAddress || "no address"}</span>
+        </Metric>
+      </section>
+
       <section className="border border-border">
         <div className="border-b px-4 py-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Pizza IDs</h2>

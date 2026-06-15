@@ -17,6 +17,8 @@ export type OrderInput = {
   status?: OrderStatus
   panic?: boolean
   order: string[]
+  customerName?: string
+  customerAddress?: string
   courierId?: string | null
 }
 
@@ -59,6 +61,8 @@ export async function listOrders(input: {
       or(
         like(orders.trackingId, pattern),
         like(orders.status, pattern),
+        like(orders.customerName, pattern),
+        like(orders.customerAddress, pattern),
         like(orders.courierId, pattern),
         like(orders.order, pattern)
       )
@@ -118,6 +122,8 @@ function toNewOrder(input: OrderInput): NewOrder {
     status: input.status ?? "received",
     panic: input.panic ?? false,
     order: input.order,
+    customerName: input.customerName?.trim() ?? "",
+    customerAddress: input.customerAddress?.trim() ?? "",
     courierId: input.courierId?.trim() || null,
   }
 }

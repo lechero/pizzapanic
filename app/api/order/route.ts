@@ -24,6 +24,8 @@ type OrderBody = {
   status?: unknown
   panic?: unknown
   order?: unknown
+  customerName?: unknown
+  customerAddress?: unknown
   courierId?: unknown
 }
 
@@ -185,6 +187,18 @@ function normalizeCourierId(value: unknown) {
   return normalizeOptionalString(value, "courierId")
 }
 
+function normalizeCustomerText(value: unknown, field: string) {
+  if (value === undefined) {
+    return undefined
+  }
+
+  if (typeof value !== "string") {
+    throw new ApiError(`${field} must be a string.`)
+  }
+
+  return value.trim()
+}
+
 function makeTrackingId() {
   return `trk_${randomUUID().replaceAll("-", "").slice(0, 12)}`
 }
@@ -231,6 +245,8 @@ export async function POST(request: Request) {
     const status = normalizeStatus(body.status, "received")
     const panic = normalizePanic(body.panic, false)
     const trackingId = normalizeOptionalString(body.trackingId, "trackingId") ?? makeTrackingId()
+    const customerName = normalizeCustomerText(body.customerName, "customerName") ?? ""
+    const customerAddress = normalizeCustomerText(body.customerAddress, "customerAddress") ?? ""
     const courierId = normalizeCourierId(body.courierId) ?? null
 
     const [createdOrder] = await getDb()
@@ -241,6 +257,8 @@ export async function POST(request: Request) {
         status,
         panic,
         order,
+        customerName,
+        customerAddress,
         courierId,
       })
       .returning()
@@ -267,6 +285,14 @@ export async function PATCH(request: Request) {
 
     if ("order" in body) {
       updates.order = normalizePizzaIds(body.order, true)
+    }
+
+    if ("customerName" in body) {
+      updates.customerName = normalizeCustomerText(body.customerName, "customerName")
+    }
+
+    if ("customerAddress" in body) {
+      updates.customerAddress = normalizeCustomerText(body.customerAddress, "customerAddress")
     }
 
     if ("courierId" in body) {
