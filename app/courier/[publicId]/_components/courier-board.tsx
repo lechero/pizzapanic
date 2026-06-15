@@ -20,6 +20,7 @@ import {
   OrderStatusBadge,
   PanicBadge,
 } from "@/app/orders/_components/order-status-badge"
+import { OrderTimerBadge } from "@/app/orders/_components/order-timer-badge"
 import { Button } from "@/components/ui/button"
 import { useOrderRealtimeRefresh } from "@/lib/order-realtime/use-order-realtime-refresh"
 import { cn } from "@/lib/utils"
@@ -36,6 +37,8 @@ export type CourierBoardOrder = {
   customerAddress: string
   pizzaCount: number
   panic: boolean
+  statusStartedAt: number | null
+  timeoutMs: number | null
 }
 
 type CourierBoardProps = {
@@ -216,7 +219,14 @@ function OrderPanel({
   children: React.ReactNode
 }) {
   return (
-    <article className="border border-border bg-card text-card-foreground">
+    <article
+      className={cn(
+        "border bg-card text-card-foreground",
+        order.panic
+          ? "border-destructive/40 shadow-[inset_3px_0_0_var(--destructive)]"
+          : "border-border"
+      )}
+    >
       <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -224,6 +234,11 @@ function OrderPanel({
               {order.trackingId}
             </span>
             <PanicBadge panic={order.panic} />
+            <OrderTimerBadge
+              panic={order.panic}
+              startedAt={order.statusStartedAt}
+              timeoutMs={order.timeoutMs}
+            />
           </div>
           <h3 className="mt-2 truncate text-lg font-semibold">
             {order.customerName || "unknown"}

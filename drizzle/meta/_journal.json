@@ -29,6 +29,13 @@
       "when": 1781563696130,
       "tag": "0003_add_order_panic_from_status",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1781565994348,
+      "tag": "0004_add_order_status_started_at",
+      "breakpoints": true
     }
   ]
 }

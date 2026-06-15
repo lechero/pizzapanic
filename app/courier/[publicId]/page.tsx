@@ -7,6 +7,7 @@ import {
 import { getTransitOrderForCourier, listCookedOrders } from "@/db/orders"
 import type { Order } from "@/db/schema"
 import { getCourierByPublicId } from "@/lib/kitchen"
+import { getOrderTimeoutMs } from "@/lib/order-timeouts"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -50,5 +51,7 @@ function toCourierBoardOrder(order: Order): CourierBoardOrder {
     customerAddress: order.customerAddress,
     pizzaCount: order.order.length,
     panic: order.panic,
+    statusStartedAt: order.statusStartedAt,
+    timeoutMs: getOrderTimeoutMs(order),
   }
 }

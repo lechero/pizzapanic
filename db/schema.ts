@@ -19,6 +19,7 @@ export const orders = sqliteTable(
     customerAddress: text("customer_address").notNull().default(""),
     courierId: text("courier_id"),
     cookingStartedAt: integer("cooking_started_at"),
+    statusStartedAt: integer("status_started_at"),
   },
   (table) => [
     index("order_status_idx").on(table.status),

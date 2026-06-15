@@ -1,0 +1,1 @@
+ALTER TABLE `order` ADD `status_started_at` integer;

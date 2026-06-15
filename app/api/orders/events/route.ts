@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server"
 
+import { retainOrderPanicTicker } from "@/db/order-panic-ticker"
 import { getOrderByTrackingId } from "@/db/orders"
 import { getCourierByPublicId } from "@/lib/kitchen"
 import { subscribeToOrderMutations } from "@/lib/order-realtime/server"
@@ -72,6 +73,7 @@ function createOrderEventStream(
 ) {
   const encoder = new TextEncoder()
   let closed = false
+  let releaseTicker: (() => void) | undefined
   let unsubscribe: (() => void) | undefined
   let heartbeat: ReturnType<typeof setInterval> | undefined
 
@@ -95,6 +97,7 @@ function createOrderEventStream(
         }
 
         closed = true
+        releaseTicker?.()
         unsubscribe?.()
 
         if (heartbeat) {
@@ -109,6 +112,7 @@ function createOrderEventStream(
       }
 
       enqueue(": connected\n\n")
+      releaseTicker = retainOrderPanicTicker()
 
       unsubscribe = subscribeToOrderMutations((mutation) => {
         const event = selectEvent(mutation)
@@ -126,6 +130,7 @@ function createOrderEventStream(
     },
     cancel() {
       closed = true
+      releaseTicker?.()
       unsubscribe?.()
 
       if (heartbeat) {

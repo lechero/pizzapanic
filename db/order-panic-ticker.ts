@@ -6,6 +6,24 @@ export type OrderPanicTicker = {
   stop: () => void
 }
 
+type OrderPanicTickerState = {
+  activeStreams: number
+  ticker: OrderPanicTicker | null
+}
+
+const globalForOrderPanicTicker = globalThis as typeof globalThis & {
+  __pizzaPanicOrderPanicTicker?: OrderPanicTickerState
+}
+
+function getOrderPanicTickerState() {
+  globalForOrderPanicTicker.__pizzaPanicOrderPanicTicker ??= {
+    activeStreams: 0,
+    ticker: null,
+  }
+
+  return globalForOrderPanicTicker.__pizzaPanicOrderPanicTicker
+}
+
 export function startOrderPanicTicker(
   input: {
     intervalMs?: number
@@ -40,5 +58,27 @@ export function startOrderPanicTicker(
     stop() {
       clearInterval(interval)
     },
+  }
+}
+
+export function retainOrderPanicTicker() {
+  const state = getOrderPanicTickerState()
+  let released = false
+
+  state.activeStreams += 1
+  state.ticker ??= startOrderPanicTicker()
+
+  return () => {
+    if (released) {
+      return
+    }
+
+    released = true
+    state.activeStreams = Math.max(0, state.activeStreams - 1)
+
+    if (state.activeStreams === 0) {
+      state.ticker?.stop()
+      state.ticker = null
+    }
   }
 }

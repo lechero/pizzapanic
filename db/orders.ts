@@ -10,9 +10,9 @@ import {
   maxCookingOrders,
   maxTransitOrders,
 } from "@/lib/kitchen"
+import { getOrderTimeoutMs, isTimedOrderStatus } from "@/lib/order-timeouts"
 import { orderStatuses, type OrderStatus } from "@/lib/order-statuses"
 import { publishOrderMutation } from "@/lib/order-realtime/server"
-import { getPizzaById } from "@/lib/pizzas"
 
 export const orderSorts = [
   "trackingId",
@@ -37,6 +37,7 @@ export type OrderInput = {
 
 export type OrderUpdateInput = Partial<Omit<OrderInput, "trackingId">> & {
   cookingStartedAt?: number | null
+  statusStartedAt?: number | null
   panicFromStatus?: OrderStatus | null
 }
 
@@ -171,6 +172,7 @@ export async function pickUpCookedOrder(input: {
     .set({
       status: "transit",
       courierId: courier.id,
+      statusStartedAt: Date.now(),
     })
     .where(and(eq(orders.id, input.orderId), eq(orders.status, "cooked")))
     .returning()
@@ -206,6 +208,7 @@ export async function deliverCourierOrder(input: {
     .update(orders)
     .set({
       status: "delivered",
+      statusStartedAt: Date.now(),
     })
     .where(
       and(
@@ -361,54 +364,59 @@ export async function panicOrder(id: string): Promise<OrderMutationResult> {
 
 export async function tickOrderPanicState(now = Date.now()) {
   const db = getDb()
-  const cookingOrders = await db
+  const pendingOrders = await db
     .select()
     .from(orders)
-    .where(eq(orders.status, "cooking"))
+    .where(eq(orders.panic, false))
   let started = 0
   let panicked = 0
 
-  for (const order of cookingOrders) {
-    if (!order.cookingStartedAt) {
+  for (const order of pendingOrders) {
+    if (!isTimedOrderStatus(order.status)) {
+      continue
+    }
+
+    let currentOrder = order
+
+    if (!currentOrder.statusStartedAt) {
+      const statusStartedAt =
+        currentOrder.status === "cooking" && currentOrder.cookingStartedAt
+          ? currentOrder.cookingStartedAt
+          : now
       const [updatedOrder] = await db
         .update(orders)
-        .set({ cookingStartedAt: now })
-        .where(eq(orders.id, order.id))
+        .set({ statusStartedAt })
+        .where(eq(orders.id, currentOrder.id))
         .returning()
 
       if (updatedOrder) {
-        publishOrderUpdated(order, updatedOrder)
+        publishOrderUpdated(currentOrder, updatedOrder)
+        currentOrder = updatedOrder
       }
 
       started += 1
+    }
+
+    const timeoutMs = getOrderTimeoutMs(currentOrder)
+
+    if (!timeoutMs || !currentOrder.statusStartedAt) {
       continue
     }
 
-    if (order.panic) {
-      continue
-    }
-
-    const firstPizzaId = order.order[0]
-    const firstPizza = firstPizzaId ? getPizzaById(firstPizzaId) : null
-
-    if (!firstPizza) {
-      continue
-    }
-
-    const panicAt = order.cookingStartedAt + firstPizza.panicTime * 60_000
+    const panicAt = currentOrder.statusStartedAt + timeoutMs
 
     if (now >= panicAt) {
       const [updatedOrder] = await db
         .update(orders)
         .set({
           panic: true,
-          panicFromStatus: order.panicFromStatus ?? order.status,
+          panicFromStatus: currentOrder.panicFromStatus ?? currentOrder.status,
         })
-        .where(eq(orders.id, order.id))
+        .where(eq(orders.id, currentOrder.id))
         .returning()
 
       if (updatedOrder) {
-        publishOrderUpdated(order, updatedOrder)
+        publishOrderUpdated(currentOrder, updatedOrder)
       }
 
       panicked += 1
@@ -416,7 +424,7 @@ export async function tickOrderPanicState(now = Date.now()) {
   }
 
   return {
-    checked: cookingOrders.length,
+    checked: pendingOrders.length,
     started,
     panicked,
   }
@@ -440,6 +448,7 @@ function toNewOrder(input: OrderInput): NewOrder {
     customerAddress: input.customerAddress?.trim() ?? "",
     courierId: input.courierId?.trim() || null,
     cookingStartedAt: status === "cooking" ? Date.now() : null,
+    statusStartedAt: Date.now(),
   }
 }
 
@@ -452,6 +461,10 @@ function toOrderUpdate(
   if (input.status === "cooking") {
     update.cookingStartedAt =
       input.cookingStartedAt ?? currentOrder?.cookingStartedAt ?? Date.now()
+  }
+
+  if (input.status && input.status !== currentOrder?.status) {
+    update.statusStartedAt = input.statusStartedAt ?? Date.now()
   }
 
   if (input.panic === true) {
@@ -545,6 +558,7 @@ async function getStatusUpdate(
 ): Promise<OrderUpdateInput> {
   const update: OrderUpdateInput = {
     status: nextStatus,
+    statusStartedAt: Date.now(),
   }
 
   if (nextStatus === "cooking" && order.status !== "cooking") {

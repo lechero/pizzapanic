@@ -112,7 +112,7 @@ export function MenuOrderPanel({ pizzas }: MenuOrderPanelProps) {
                   <span className="text-xl font-semibold">{formatPizzaPrice(pizza.price)}</span>
                   <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
                     <Clock className="size-3.5" />
-                    {pizza.panicTime} min
+                    +{pizza.panicTime}s
                   </span>
                 </div>
 

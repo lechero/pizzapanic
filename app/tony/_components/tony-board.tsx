@@ -11,9 +11,11 @@ import {
   OrderStatusBadge,
   PanicBadge,
 } from "@/app/orders/_components/order-status-badge"
+import { OrderTimerBadge } from "@/app/orders/_components/order-timer-badge"
 import { Button } from "@/components/ui/button"
 import type { Order } from "@/db/schema"
 import { couriers, ovens } from "@/lib/kitchen"
+import { getOrderTimeoutMs } from "@/lib/order-timeouts"
 import { orderStatuses, type OrderStatus } from "@/lib/order-statuses"
 import { useOrderRealtimeRefresh } from "@/lib/order-realtime/use-order-realtime-refresh"
 import { cn } from "@/lib/utils"
@@ -276,13 +278,20 @@ function OrderSummary({
   order: Order
   showStatus?: boolean
 }) {
+  const timeoutMs = getOrderTimeoutMs(order)
+
   return (
     <div className="min-w-0">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="truncate font-mono text-xs font-semibold">
           {order.trackingId}
         </span>
         <PanicBadge panic={order.panic} />
+        <OrderTimerBadge
+          panic={order.panic}
+          startedAt={order.statusStartedAt}
+          timeoutMs={timeoutMs}
+        />
         {showStatus ? <OrderStatusBadge status={order.status} /> : null}
       </div>
       <div className="mt-2 truncate text-sm font-medium">
