@@ -1,0 +1,1 @@
+ALTER TABLE `order` ADD `cooking_started_at` integer;

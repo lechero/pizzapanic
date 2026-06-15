@@ -9,12 +9,15 @@ export const orders = sqliteTable(
   {
     id: text("id").primaryKey(),
     trackingId: text("tracking_id").notNull().unique(),
-    status: text("status", { enum: orderStatuses }).notNull().default("received"),
+    status: text("status", { enum: orderStatuses })
+      .notNull()
+      .default("received"),
     panic: integer("panic", { mode: "boolean" }).notNull().default(false),
     order: text("order", { mode: "json" }).$type<string[]>().notNull(),
     customerName: text("customer_name").notNull().default(""),
     customerAddress: text("customer_address").notNull().default(""),
     courierId: text("courier_id"),
+    cookingStartedAt: integer("cooking_started_at"),
   },
   (table) => [
     index("order_status_idx").on(table.status),

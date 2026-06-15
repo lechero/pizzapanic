@@ -15,6 +15,13 @@
       "when": 1781562164775,
       "tag": "0001_add_order_customer_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1781563039890,
+      "tag": "0002_add_order_cooking_started_at",
+      "breakpoints": true
     }
   ]
 }

@@ -39,11 +39,17 @@ function errorResponse(error: unknown) {
   }
 
   if (isSqliteUniqueConstraint(error)) {
-    return json({ error: "An order with this trackingId already exists." }, { status: 409 })
+    return json(
+      { error: "An order with this trackingId already exists." },
+      { status: 409 }
+    )
   }
 
   console.error(error)
-  return json({ error: "Unable to process the order request." }, { status: 500 })
+  return json(
+    { error: "Unable to process the order request." },
+    { status: 500 }
+  )
 }
 
 function isSqliteUniqueConstraint(error: unknown) {
@@ -77,7 +83,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function readLookupFromSearchParams(searchParams: URLSearchParams) {
   const id = normalizeOptionalString(searchParams.get("id"), "id")
-  const trackingId = normalizeOptionalString(searchParams.get("trackingId"), "trackingId")
+  const trackingId = normalizeOptionalString(
+    searchParams.get("trackingId"),
+    "trackingId"
+  )
 
   if (id && trackingId) {
     throw new ApiError("Use either id or trackingId, not both.")
@@ -124,7 +133,10 @@ function normalizeStatus(value: unknown, fallback?: OrderStatus) {
     return fallback
   }
 
-  if (typeof value !== "string" || !orderStatuses.includes(value as OrderStatus)) {
+  if (
+    typeof value !== "string" ||
+    !orderStatuses.includes(value as OrderStatus)
+  ) {
     throw new ApiError(`status must be one of: ${orderStatuses.join(", ")}.`)
   }
 
@@ -144,7 +156,10 @@ function normalizePanic(value: unknown, fallback?: boolean) {
 }
 
 function normalizePizzaIds(value: unknown, required: true): string[]
-function normalizePizzaIds(value: unknown, required: false): string[] | undefined
+function normalizePizzaIds(
+  value: unknown,
+  required: false
+): string[] | undefined
 function normalizePizzaIds(value: unknown, required: boolean) {
   if (value === undefined && !required) {
     return undefined
@@ -222,7 +237,11 @@ export async function GET(request: NextRequest) {
     const db = getDb()
 
     if (lookup.id || lookup.trackingId) {
-      const [order] = await db.select().from(orders).where(whereOrder(lookup)).limit(1)
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(whereOrder(lookup))
+        .limit(1)
 
       if (!order) {
         return json({ error: "Order not found." }, { status: 404 })
@@ -244,9 +263,12 @@ export async function POST(request: Request) {
     const order = normalizePizzaIds(body.order, true)
     const status = normalizeStatus(body.status, "received")
     const panic = normalizePanic(body.panic, false)
-    const trackingId = normalizeOptionalString(body.trackingId, "trackingId") ?? makeTrackingId()
-    const customerName = normalizeCustomerText(body.customerName, "customerName") ?? ""
-    const customerAddress = normalizeCustomerText(body.customerAddress, "customerAddress") ?? ""
+    const trackingId =
+      normalizeOptionalString(body.trackingId, "trackingId") ?? makeTrackingId()
+    const customerName =
+      normalizeCustomerText(body.customerName, "customerName") ?? ""
+    const customerAddress =
+      normalizeCustomerText(body.customerAddress, "customerAddress") ?? ""
     const courierId = normalizeCourierId(body.courierId) ?? null
 
     const [createdOrder] = await getDb()
@@ -260,6 +282,7 @@ export async function POST(request: Request) {
         customerName,
         customerAddress,
         courierId,
+        cookingStartedAt: status === "cooking" ? Date.now() : null,
       })
       .returning()
 
@@ -277,6 +300,20 @@ export async function PATCH(request: Request) {
 
     if ("status" in body) {
       updates.status = normalizeStatus(body.status)
+
+      if (updates.status === "cooking") {
+        const [currentOrder] = await getDb()
+          .select({ cookingStartedAt: orders.cookingStartedAt })
+          .from(orders)
+          .where(whereOrder(lookup))
+          .limit(1)
+
+        updates.cookingStartedAt = currentOrder?.cookingStartedAt ?? Date.now()
+      }
+
+      if (updates.status === "received") {
+        updates.cookingStartedAt = null
+      }
     }
 
     if ("panic" in body) {
@@ -288,11 +325,17 @@ export async function PATCH(request: Request) {
     }
 
     if ("customerName" in body) {
-      updates.customerName = normalizeCustomerText(body.customerName, "customerName")
+      updates.customerName = normalizeCustomerText(
+        body.customerName,
+        "customerName"
+      )
     }
 
     if ("customerAddress" in body) {
-      updates.customerAddress = normalizeCustomerText(body.customerAddress, "customerAddress")
+      updates.customerAddress = normalizeCustomerText(
+        body.customerAddress,
+        "customerAddress"
+      )
     }
 
     if ("courierId" in body) {
