@@ -7,6 +7,7 @@ import { orders, type NewOrder, type Order } from "@/db/schema"
 import {
   couriers,
   getCourierById,
+  orderUsesOven,
   maxCookingOrders,
   maxTransitOrders,
 } from "@/lib/kitchen"
@@ -520,13 +521,13 @@ function getAdjacentStatus(status: OrderStatus, direction: OrderMoveDirection) {
 async function getCapacityError(order: Order, nextStatus: OrderStatus) {
   if (nextStatus === "cooking") {
     const cookingOrders = await getDb()
-      .select({ id: orders.id })
+      .select({ id: orders.id, status: orders.status, panic: orders.panic })
       .from(orders)
-      .where(eq(orders.status, "cooking"))
+      .where(and(eq(orders.status, "cooking"), eq(orders.panic, false)))
 
     if (
       !cookingOrders.some((cookingOrder) => cookingOrder.id === order.id) &&
-      cookingOrders.length >= maxCookingOrders
+      cookingOrders.filter(orderUsesOven).length >= maxCookingOrders
     ) {
       return `All ${maxCookingOrders} ovens are busy.`
     }

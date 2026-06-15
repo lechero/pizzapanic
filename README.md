@@ -216,9 +216,11 @@ corepack pnpm exec drizzle-kit migrate
 
 Sketches and planning artifacts are stored in `state/mind/`:
 
-- [plan-language.png](state/mind/plan-language.png)
-- [reduced-story-board.png](state/mind/reduced-story-board.png)
-- [tech-basket.png](state/mind/tech-basket.png)
+![Plan language](state/mind/plan-language.png)
+
+![Reduced story board](state/mind/reduced-story-board.png)
+
+![Tech basket](state/mind/tech-basket.png)
 
 The implementation plan is stored in:
 

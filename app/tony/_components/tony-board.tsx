@@ -14,7 +14,7 @@ import {
 import { OrderTimerBadge } from "@/app/orders/_components/order-timer-badge"
 import { Button } from "@/components/ui/button"
 import type { Order } from "@/db/schema"
-import { couriers, ovens } from "@/lib/kitchen"
+import { couriers, isBurnedOrder, orderUsesOven, ovens } from "@/lib/kitchen"
 import { getOrderTimeoutMs } from "@/lib/order-timeouts"
 import { orderStatuses, type OrderStatus } from "@/lib/order-statuses"
 import { useOrderRealtimeRefresh } from "@/lib/order-realtime/use-order-realtime-refresh"
@@ -42,9 +42,7 @@ export function TonyBoard({ orders }: TonyBoardProps) {
     [activeOrders]
   )
   const panicOrders = orders.filter((order) => order.panic)
-  const cookingCount = orders.filter(
-    (order) => order.status === "cooking"
-  ).length
+  const cookingCount = orders.filter(orderUsesOven).length
   const transitCount = orders.filter(
     (order) => order.status === "transit"
   ).length
@@ -279,6 +277,7 @@ function OrderSummary({
   showStatus?: boolean
 }) {
   const timeoutMs = getOrderTimeoutMs(order)
+  const burned = isBurnedOrder(order)
 
   return (
     <div className="min-w-0">
@@ -292,7 +291,13 @@ function OrderSummary({
           startedAt={order.statusStartedAt}
           timeoutMs={timeoutMs}
         />
-        {showStatus ? <OrderStatusBadge status={order.status} /> : null}
+        {showStatus ? (
+          burned ? (
+            <BurnedBadge />
+          ) : (
+            <OrderStatusBadge status={order.status} />
+          )
+        ) : null}
       </div>
       <div className="mt-2 truncate text-sm font-medium">
         {order.customerName || "unknown"}
@@ -313,6 +318,14 @@ function OrderSummary({
         </div>
       ) : null}
     </div>
+  )
+}
+
+function BurnedBadge() {
+  return (
+    <span className="inline-flex h-6 items-center border border-orange-500/40 bg-orange-500/10 px-2 font-mono text-[11px] font-medium text-orange-700 uppercase dark:text-orange-300">
+      burned
+    </span>
   )
 }
 

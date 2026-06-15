@@ -9,9 +9,11 @@ tasks:
       - task --list
 
   install:
-    desc: Install project dependencies with pnpm
+    desc: Install dependencies, rebuild native bindings, and migrate the local database
     cmds:
-      - corepack pnpm install
+      - pnpm install
+      - pnpm rebuild better-sqlite3
+      - task: migrate
 
   info:
     desc: Show project setup and task usage guidance
@@ -27,12 +29,12 @@ tasks:
     desc: Apply Drizzle migrations to the local SQLite database
     cmds:
       - mkdir -p var
-      - corepack pnpm exec drizzle-kit migrate
+      - pnpm exec drizzle-kit migrate
 
   dev:
     desc: Start the Next.js development server
     cmds:
-      - corepack pnpm dev
+      - pnpm dev
 
   shadd:
     desc: Add shadcn/ui components; pass names after -- or omit them for the component picker

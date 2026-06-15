@@ -1,3 +1,5 @@
+import type { OrderStatus } from "@/lib/order-statuses"
+
 export const ovens: number = 4
 
 export type Courier = {
@@ -73,6 +75,23 @@ export type CourierId = (typeof couriers)[number]["id"]
 
 export const maxCookingOrders = ovens
 export const maxTransitOrders = couriers.length
+
+type OvenOrder = {
+  status: OrderStatus
+  panic: boolean
+}
+
+type BurnedOrder = OvenOrder & {
+  panicFromStatus: OrderStatus | null
+}
+
+export function orderUsesOven(order: OvenOrder) {
+  return order.status === "cooking" && !order.panic
+}
+
+export function isBurnedOrder(order: BurnedOrder) {
+  return order.panic && (order.panicFromStatus ?? order.status) === "cooking"
+}
 
 export function getCourierById(id: string) {
   return couriers.find((courier) => courier.id === id) ?? null

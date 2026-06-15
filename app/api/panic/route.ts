@@ -1,5 +1,4 @@
-import { createOrder } from "@/db/orders"
-import { couriers } from "@/lib/kitchen"
+import { createOrder, type OrderInput } from "@/db/orders"
 import type { OrderStatus } from "@/lib/order-statuses"
 import { pizzas } from "@/lib/pizzas"
 
@@ -10,12 +9,6 @@ const minOrders = 5
 const maxOrders = 20
 const minPizzasPerOrder = 1
 const maxPizzasPerOrder = 4
-const panicStatuses = [
-  "received",
-  "cooking",
-  "cooked",
-  "transit",
-] as const satisfies readonly OrderStatus[]
 
 const customerNames = [
   "Alex Arcade",
@@ -68,15 +61,13 @@ export async function POST() {
   }
 }
 
-function makePanicOrderInput() {
-  const status = randomItem(panicStatuses)
-
+function makePanicOrderInput(): OrderInput {
   return {
-    status,
+    status: "received",
     order: makePizzaOrder(),
     customerName: randomItem(customerNames),
     customerAddress: `${randomInteger(10, 999)} ${randomItem(customerStreets)}`,
-    courierId: status === "transit" ? randomItem(couriers).id : null,
+    courierId: null,
   }
 }
 
