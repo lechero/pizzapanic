@@ -1,10 +1,15 @@
-import { randomUUID } from "node:crypto"
-
-import { eq } from "drizzle-orm"
 import type { NextRequest } from "next/server"
 
-import { getDb } from "@/db"
-import { orders, orderStatuses, type OrderStatus } from "@/db/schema"
+import {
+  createOrder,
+  deleteOrder,
+  getOrderById,
+  getOrderByTrackingId,
+  listOrders,
+  updateOrder,
+  type OrderUpdateInput,
+} from "@/db/orders"
+import { orderStatuses, type OrderStatus } from "@/db/schema"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -214,34 +219,13 @@ function normalizeCustomerText(value: unknown, field: string) {
   return value.trim()
 }
 
-function makeTrackingId() {
-  return `trk_${randomUUID().replaceAll("-", "").slice(0, 12)}`
-}
-
-function whereOrder(input: { id?: string; trackingId?: string }) {
-  if (input.id) {
-    return eq(orders.id, input.id)
-  }
-
-  if (input.trackingId) {
-    return eq(orders.trackingId, input.trackingId)
-  }
-
-  throw new ApiError("Provide id or trackingId.")
-}
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
     const lookup = readLookupFromSearchParams(searchParams)
-    const db = getDb()
 
     if (lookup.id || lookup.trackingId) {
-      const [order] = await db
-        .select()
-        .from(orders)
-        .where(whereOrder(lookup))
-        .limit(1)
+      const order = await getOrderForLookup(lookup)
 
       if (!order) {
         return json({ error: "Order not found." }, { status: 404 })
@@ -250,7 +234,7 @@ export async function GET(request: NextRequest) {
       return json({ order })
     }
 
-    const orderRows = await db.select().from(orders).orderBy(orders.trackingId)
+    const orderRows = await listOrders()
     return json({ orders: orderRows })
   } catch (error) {
     return errorResponse(error)
@@ -263,29 +247,22 @@ export async function POST(request: Request) {
     const order = normalizePizzaIds(body.order, true)
     const status = normalizeStatus(body.status, "received")
     const panic = normalizePanic(body.panic, false)
-    const trackingId =
-      normalizeOptionalString(body.trackingId, "trackingId") ?? makeTrackingId()
+    const trackingId = normalizeOptionalString(body.trackingId, "trackingId")
     const customerName =
       normalizeCustomerText(body.customerName, "customerName") ?? ""
     const customerAddress =
       normalizeCustomerText(body.customerAddress, "customerAddress") ?? ""
     const courierId = normalizeCourierId(body.courierId) ?? null
 
-    const [createdOrder] = await getDb()
-      .insert(orders)
-      .values({
-        id: randomUUID(),
-        trackingId,
-        status,
-        panic,
-        panicFromStatus: panic ? status : null,
-        order,
-        customerName,
-        customerAddress,
-        courierId,
-        cookingStartedAt: status === "cooking" ? Date.now() : null,
-      })
-      .returning()
+    const createdOrder = await createOrder({
+      trackingId,
+      status,
+      panic,
+      order,
+      customerName,
+      customerAddress,
+      courierId,
+    })
 
     return json({ order: createdOrder }, { status: 201 })
   } catch (error) {
@@ -297,57 +274,20 @@ export async function PATCH(request: Request) {
   try {
     const body = await readBody(request)
     const lookup = readLookupFromBody(body)
-    const updates: Partial<typeof orders.$inferInsert> = {}
-    let currentOrder:
-      | Pick<
-          typeof orders.$inferSelect,
-          "status" | "panicFromStatus" | "cookingStartedAt"
-        >
-      | null
-      | undefined
+    const order = await getOrderForLookup(lookup)
 
-    async function getCurrentOrder() {
-      if (currentOrder !== undefined) {
-        return currentOrder
-      }
-
-      const [order] = await getDb()
-        .select({
-          status: orders.status,
-          panicFromStatus: orders.panicFromStatus,
-          cookingStartedAt: orders.cookingStartedAt,
-        })
-        .from(orders)
-        .where(whereOrder(lookup))
-        .limit(1)
-
-      currentOrder = order ?? null
-      return currentOrder
+    if (!order) {
+      return json({ error: "Order not found." }, { status: 404 })
     }
+
+    const updates: OrderUpdateInput = {}
 
     if ("status" in body) {
       updates.status = normalizeStatus(body.status)
-
-      if (updates.status === "cooking") {
-        updates.cookingStartedAt =
-          (await getCurrentOrder())?.cookingStartedAt ?? Date.now()
-      }
-
-      if (updates.status === "received") {
-        updates.cookingStartedAt = null
-      }
     }
 
     if ("panic" in body) {
       updates.panic = normalizePanic(body.panic)
-
-      if (updates.panic) {
-        const order = await getCurrentOrder()
-        updates.panicFromStatus =
-          order?.panicFromStatus ?? updates.status ?? order?.status ?? null
-      } else {
-        updates.panicFromStatus = null
-      }
     }
 
     if ("order" in body) {
@@ -376,11 +316,7 @@ export async function PATCH(request: Request) {
       throw new ApiError("Provide at least one field to update.")
     }
 
-    const [updatedOrder] = await getDb()
-      .update(orders)
-      .set(updates)
-      .where(whereOrder(lookup))
-      .returning()
+    const updatedOrder = await updateOrder(order.id, updates)
 
     if (!updatedOrder) {
       return json({ error: "Order not found." }, { status: 404 })
@@ -400,10 +336,13 @@ export async function DELETE(request: NextRequest) {
       throw new ApiError("Provide id or trackingId.")
     }
 
-    const [deletedOrder] = await getDb()
-      .delete(orders)
-      .where(whereOrder(lookup))
-      .returning()
+    const order = await getOrderForLookup(lookup)
+
+    if (!order) {
+      return json({ error: "Order not found." }, { status: 404 })
+    }
+
+    const deletedOrder = await deleteOrder(order.id)
 
     if (!deletedOrder) {
       return json({ error: "Order not found." }, { status: 404 })
@@ -413,4 +352,16 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     return errorResponse(error)
   }
+}
+
+async function getOrderForLookup(input: { id?: string; trackingId?: string }) {
+  if (input.id) {
+    return getOrderById(input.id)
+  }
+
+  if (input.trackingId) {
+    return getOrderByTrackingId(input.trackingId)
+  }
+
+  throw new ApiError("Provide id or trackingId.")
 }

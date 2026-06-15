@@ -21,6 +21,7 @@ import {
   PanicBadge,
 } from "@/app/orders/_components/order-status-badge"
 import { Button } from "@/components/ui/button"
+import { useOrderRealtimeRefresh } from "@/lib/order-realtime/use-order-realtime-refresh"
 import { cn } from "@/lib/utils"
 
 type CourierBoardCourier = {
@@ -53,6 +54,8 @@ export function CourierBoard({
   activeOrder,
   cookedOrders,
 }: CourierBoardProps) {
+  useOrderRealtimeRefresh({ scope: "courier", publicId: courier.publicId })
+
   const [state, formAction, pending] = React.useActionState(
     updateCourierOrderAction,
     initialState

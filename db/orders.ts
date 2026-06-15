@@ -11,6 +11,7 @@ import {
   maxTransitOrders,
 } from "@/lib/kitchen"
 import { orderStatuses, type OrderStatus } from "@/lib/order-statuses"
+import { publishOrderMutation } from "@/lib/order-realtime/server"
 import { getPizzaById } from "@/lib/pizzas"
 
 export const orderSorts = [
@@ -164,6 +165,7 @@ export async function pickUpCookedOrder(input: {
     }
   }
 
+  const before = await getOrderById(input.orderId)
   const [updatedOrder] = await getDb()
     .update(orders)
     .set({
@@ -172,6 +174,10 @@ export async function pickUpCookedOrder(input: {
     })
     .where(and(eq(orders.id, input.orderId), eq(orders.status, "cooked")))
     .returning()
+
+  if (updatedOrder) {
+    publishOrderUpdated(before, updatedOrder)
+  }
 
   return {
     ok: Boolean(updatedOrder),
@@ -195,6 +201,7 @@ export async function deliverCourierOrder(input: {
     }
   }
 
+  const before = await getOrderById(input.orderId)
   const [updatedOrder] = await getDb()
     .update(orders)
     .set({
@@ -208,6 +215,10 @@ export async function deliverCourierOrder(input: {
       )
     )
     .returning()
+
+  if (updatedOrder) {
+    publishOrderUpdated(before, updatedOrder)
+  }
 
   return {
     ok: Boolean(updatedOrder),
@@ -224,16 +235,25 @@ export async function createOrder(input: OrderInput) {
     .values(toNewOrder(input))
     .returning()
 
+  if (createdOrder) {
+    publishOrderCreated(createdOrder)
+  }
+
   return createdOrder
 }
 
 export async function updateOrder(id: string, input: OrderUpdateInput) {
-  const update = await toOrderUpdate(id, input)
+  const before = await getOrderById(id)
+  const update = toOrderUpdate(before, input)
   const [updatedOrder] = await getDb()
     .update(orders)
     .set(update)
     .where(eq(orders.id, id))
     .returning()
+
+  if (updatedOrder) {
+    publishOrderUpdated(before, updatedOrder)
+  }
 
   return updatedOrder ?? null
 }
@@ -243,6 +263,11 @@ export async function deleteOrder(id: string) {
     .delete(orders)
     .where(eq(orders.id, id))
     .returning()
+
+  if (deletedOrder) {
+    publishOrderDeleted(deletedOrder)
+  }
+
   return deletedOrder ?? null
 }
 
@@ -291,6 +316,10 @@ export async function moveOrderStatus(
     .where(eq(orders.id, id))
     .returning()
 
+  if (updatedOrder) {
+    publishOrderUpdated(order, updatedOrder)
+  }
+
   return {
     ok: Boolean(updatedOrder),
     message: updatedOrder
@@ -319,6 +348,10 @@ export async function panicOrder(id: string): Promise<OrderMutationResult> {
     .where(eq(orders.id, id))
     .returning()
 
+  if (updatedOrder) {
+    publishOrderUpdated(order, updatedOrder)
+  }
+
   return {
     ok: Boolean(updatedOrder),
     message: updatedOrder ? "Order marked as panic." : "Order not found.",
@@ -337,10 +370,16 @@ export async function tickOrderPanicState(now = Date.now()) {
 
   for (const order of cookingOrders) {
     if (!order.cookingStartedAt) {
-      await db
+      const [updatedOrder] = await db
         .update(orders)
         .set({ cookingStartedAt: now })
         .where(eq(orders.id, order.id))
+        .returning()
+
+      if (updatedOrder) {
+        publishOrderUpdated(order, updatedOrder)
+      }
+
       started += 1
       continue
     }
@@ -359,13 +398,19 @@ export async function tickOrderPanicState(now = Date.now()) {
     const panicAt = order.cookingStartedAt + firstPizza.panicTime * 60_000
 
     if (now >= panicAt) {
-      await db
+      const [updatedOrder] = await db
         .update(orders)
         .set({
           panic: true,
           panicFromStatus: order.panicFromStatus ?? order.status,
         })
         .where(eq(orders.id, order.id))
+        .returning()
+
+      if (updatedOrder) {
+        publishOrderUpdated(order, updatedOrder)
+      }
+
       panicked += 1
     }
   }
@@ -398,11 +443,10 @@ function toNewOrder(input: OrderInput): NewOrder {
   }
 }
 
-async function toOrderUpdate(
-  id: string,
+function toOrderUpdate(
+  currentOrder: Order | null,
   input: OrderUpdateInput
-): Promise<OrderUpdateInput> {
-  const currentOrder = await getOrderById(id)
+): OrderUpdateInput {
   const update: OrderUpdateInput = { ...input }
 
   if (input.status === "cooking") {
@@ -424,6 +468,33 @@ async function toOrderUpdate(
   }
 
   return update
+}
+
+function publishOrderCreated(order: Order) {
+  publishOrderMutation({
+    operation: "created",
+    before: null,
+    after: order,
+    changedAt: Date.now(),
+  })
+}
+
+function publishOrderUpdated(before: Order | null, after: Order) {
+  publishOrderMutation({
+    operation: "updated",
+    before,
+    after,
+    changedAt: Date.now(),
+  })
+}
+
+function publishOrderDeleted(order: Order) {
+  publishOrderMutation({
+    operation: "deleted",
+    before: order,
+    after: null,
+    changedAt: Date.now(),
+  })
 }
 
 function getAdjacentStatus(status: OrderStatus, direction: OrderMoveDirection) {

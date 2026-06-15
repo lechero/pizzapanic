@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import type { Order } from "@/db/schema"
 import { couriers, ovens } from "@/lib/kitchen"
 import { orderStatuses, type OrderStatus } from "@/lib/order-statuses"
+import { useOrderRealtimeRefresh } from "@/lib/order-realtime/use-order-realtime-refresh"
 import { cn } from "@/lib/utils"
 
 type TonyBoardProps = {
@@ -27,6 +28,8 @@ const initialState: TonyOrderActionState = {
 }
 
 export function TonyBoard({ orders }: TonyBoardProps) {
+  useOrderRealtimeRefresh({ scope: "kitchen" })
+
   const [state, formAction, pending] = React.useActionState(
     updateTonyOrderAction,
     initialState

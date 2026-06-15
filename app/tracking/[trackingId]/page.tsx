@@ -1,9 +1,9 @@
-import Link from "next/link"
-import { ArrowLeft, Bike, MapPin, ReceiptText, User } from "lucide-react"
 import { notFound } from "next/navigation"
 
-import { OrderStatusBadge, PanicBadge } from "@/app/orders/_components/order-status-badge"
-import { Button } from "@/components/ui/button"
+import {
+  TrackingOrderView,
+  type TrackingOrderViewOrder,
+} from "@/app/tracking/[trackingId]/_components/tracking-order-view"
 import { getOrderByTrackingId } from "@/db/orders"
 import { getPizzaById } from "@/lib/pizzas"
 
@@ -24,94 +24,18 @@ export default async function TrackingPage({ params }: TrackingPageProps) {
     notFound()
   }
 
-  return (
-    <main className="mx-auto flex min-h-svh w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-4 border-b border-border pb-5">
-        <Button asChild variant="ghost" size="xs" className="-ml-3 w-fit">
-          <Link href="/menu">
-            <ArrowLeft />
-            Menu
-          </Link>
-        </Button>
-        <div className="min-w-0">
-          <p className="font-mono text-xs uppercase text-muted-foreground">Tracking</p>
-          <h1 className="mt-2 truncate font-mono text-2xl font-semibold">{order.trackingId}</h1>
-        </div>
-      </header>
+  const trackingOrder: TrackingOrderViewOrder = {
+    trackingId: order.trackingId,
+    status: order.status,
+    panic: order.panic,
+    customerName: order.customerName,
+    customerAddress: order.customerAddress,
+    courierId: order.courierId,
+    pizzas: order.order.map((pizzaId) => ({
+      id: pizzaId,
+      name: getPizzaById(pizzaId)?.name ?? pizzaId,
+    })),
+  }
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <Metric label="Status">
-          <OrderStatusBadge status={order.status} />
-        </Metric>
-        <Metric label="Panic">
-          <PanicBadge panic={order.panic} />
-        </Metric>
-        <Metric label="Pizzas">
-          <span className="font-mono text-sm">{order.order.length}</span>
-        </Metric>
-        <Metric label="Courier">
-          <span className="font-mono text-sm">{order.courierId ?? "unassigned"}</span>
-        </Metric>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <InfoBlock icon={<User />} label="Name" value={order.customerName || "unknown"} />
-        <InfoBlock icon={<MapPin />} label="Address" value={order.customerAddress || "no address"} />
-      </section>
-
-      <section className="border border-border">
-        <div className="flex items-center gap-2 border-b px-4 py-3">
-          <ReceiptText className="size-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold uppercase text-muted-foreground">Order</h2>
-        </div>
-        <div className="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          {order.order.map((pizzaId, index) => {
-            const pizza = getPizzaById(pizzaId)
-
-            return (
-              <div key={`${pizzaId}-${index}`} className="border border-border bg-muted/30 px-3 py-2 text-sm">
-                <div className="truncate font-medium">{pizza?.name ?? pizzaId}</div>
-                <div className="mt-1 font-mono text-xs text-muted-foreground">{pizzaId}</div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      <section className="flex items-center gap-3 border border-border p-4 text-sm text-muted-foreground">
-        <Bike className="size-4 shrink-0" />
-        <span className="min-w-0 truncate">{order.courierId ? `Courier ${order.courierId}` : "Courier pending"}</span>
-      </section>
-    </main>
-  )
+  return <TrackingOrderView order={trackingOrder} />
 }
-
-function Metric({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="border border-border p-4">
-      <div className="mb-3 text-xs font-semibold uppercase text-muted-foreground">{label}</div>
-      {children}
-    </div>
-  )
-}
-
-function InfoBlock({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-}) {
-  return (
-    <div className="flex items-start gap-3 border border-border p-4">
-      <div className="grid size-9 shrink-0 place-items-center border border-border text-muted-foreground">{icon}</div>
-      <div className="min-w-0">
-        <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
-        <div className="mt-1 break-words text-sm">{value}</div>
-      </div>
-    </div>
-  )
-}
-
