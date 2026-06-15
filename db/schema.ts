@@ -1,14 +1,8 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
 
-export const orderStatuses = [
-  "received",
-  "cooking",
-  "cooked",
-  "transit",
-  "delivered",
-] as const
+import { orderStatuses } from "@/lib/order-statuses"
 
-export type OrderStatus = (typeof orderStatuses)[number]
+export { orderStatuses, type OrderStatus } from "@/lib/order-statuses"
 
 export const orders = sqliteTable(
   "order",
